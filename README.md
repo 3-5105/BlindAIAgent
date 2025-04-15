@@ -1,0 +1,2 @@
+# BlindAIAgent
+在Windows环境下，通过无障碍辅助功能，为仅文本的单模态大模型提供GUI自动化能力
