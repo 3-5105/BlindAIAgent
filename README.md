@@ -15,7 +15,10 @@
 
 # 开发环境
 作者使用Python 3.12，或许附近的版本也可使用
+
 运行`pip install -r requirements.txt`安装依赖
+
+在json文件中配置api接口和key
 
 # 注意事项
 AI提交的内容在不经过审查的情况下就会执行。请确保AI有0%的可能伤害到您的数据
