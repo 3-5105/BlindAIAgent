@@ -1,6 +1,6 @@
 {
   "OpenAI": {
-    "api_key": "sk-92520b623f9a4c8ebc2d71bd607bdae7",
+    "api_key": "sk-***",
     "model": "deepseek-v3",
     "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1"
   },
