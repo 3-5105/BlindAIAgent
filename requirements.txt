@@ -1,0 +1,6 @@
+openai>=1.0.0
+pyautogui>=0.9.53
+pynput>=1.7.6
+uiautomation>=2.0.15
+pygetwindow>=0.0.9
+psutil>=5.9.5 
