@@ -1,0 +1,7 @@
+{
+    "excluded_windows": [
+        {
+            "title_pattern": ".*Cursor.*"
+        }
+    ]
+} 
