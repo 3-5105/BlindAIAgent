@@ -4,3 +4,14 @@ pynput>=1.7.6
 uiautomation>=2.0.15
 pygetwindow>=0.0.9
 psutil>=5.9.5 
+
+# 可选依赖
+# python-dotenv>=0.20.0  # 用于环境变量管理，如果需要从.env文件加载API密钥
+
+# 系统特定依赖
+pywin32>=303; platform_system=="Windows"  # Windows特定功能支持
+
+# 注意：tkinter通常包含在Python标准库中，但在某些发行版可能需要单独安装
+# 在Ubuntu/Debian系统上: apt-get install python3-tk
+# 在CentOS/RHEL系统上: yum install python3-tkinter
+# 在Windows系统上通常预装在Python中
