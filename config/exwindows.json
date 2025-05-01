@@ -2,6 +2,10 @@
     "excluded_windows": [
         {
             "title_pattern": ".*Cursor.*"
+        },
+        {
+            "title_pattern": ".*BlindAIAgent.*"
         }
+
     ]
 } 

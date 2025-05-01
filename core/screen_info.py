@@ -20,15 +20,16 @@ class ElementInfo:
         return self.item.ControlTypeName
 
 class ScreenInfoCollector:
-    def __init__(self):
+    def __init__(self, max_text_length=500):
         self.elements = []
         self.optable = []
         self.g_index = 0
         self.result = ""
+        self.max_text_length = max_text_length
         self.excluded_windows = self.load_excluded_windows()
 
     def load_excluded_windows(self):
-        """Load the list of windows to exclude from screen info collection"""
+        """加载需要从屏幕信息收集中排除的窗口列表"""
         try:
             if os.path.exists("config/exwindows.json"):
                 with open("config/exwindows.json", "r", encoding="utf-8") as f:
@@ -40,7 +41,7 @@ class ScreenInfoCollector:
             return []
 
     def is_window_excluded(self, window_title, window_process_name):
-        """Check if a window should be excluded from collection"""
+        """检查窗口是否应该被排除在收集范围外"""
         for exclusion in self.excluded_windows:
             try:
                 title_match = False
@@ -59,31 +60,17 @@ class ScreenInfoCollector:
         return False
 
     def get_window_process_name(self, window):
-        """Get the process name for a window"""
+        """获取窗口的进程名称"""
         try:
             pid = window.ProcessId if window else 0
             process = psutil.Process(pid)
             return process.name()
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess) as e:
-            print(f"Error getting process name: {e}")
-            return "Unknown"
-
-    """
-    def is_element_visible(self, element_info):
-        # Check if an element is visible on screen
-        try:
-            rect = element_info.item.BoundingRectangle
-            if rect.width == 0 or rect.height == 0:
-                return False
-            
-            return True
-        except Exception as e:
-            print(f"检查控件可见性时出错: {str(e)}")
-            return False
-    """
+            print(f"获取进程名称时出错: {e}")
+            return "未知"
 
     def collect_elements(self, element, elements_list=None):
-        """Recursively collect all UI elements"""
+        """递归收集所有UI元素"""
         if elements_list is None:
             elements_list = []
         
@@ -104,7 +91,7 @@ class ScreenInfoCollector:
         return elements_list
 
     def get_window_elements(self, element):
-        """Get all elements in a window"""
+        """获取窗口中的所有元素"""
         self.result = ""
         #debug_print("#get_window_elements" + " " + element.Name)
         self.elements = self.collect_elements(element)
@@ -117,43 +104,58 @@ class ScreenInfoCollector:
                 if i >= len(elements_list):
                     break
             
-                #debug_print(f"process_elements {i}  " + elements_list[i].name)
-
-                # Handle nested group controls
+                # 处理嵌套的组控件
                 if elements_list[i].type == "GroupControl" and len(elements_list[i].children) == 0:
                     elements_list.pop(i)
                     i -= 1
                     continue
 
-                # Handle nested text controls
+                # 处理嵌套的文本控件，限制最大字数
                 if elements_list[i].type == "TextControl":
                     j = i + 1
+                    # 先合并所有连续的文本控件
                     while j < len(elements_list) and elements_list[j].type == "TextControl":
                         elements_list[i].name += elements_list[j].name
                         elements_list.pop(j)
+                    
+                    # 合并完成后检查长度，如果超过限制则截断
+                    if len(elements_list[i].name) > self.max_text_length:
+                        elements_list[i].name = elements_list[i].name[:self.max_text_length]
 
-                # Handle nested group controls
+                # 处理嵌套的组控件
                 while (elements_list[i].type == "GroupControl" and 
                        len(elements_list[i].children) == 1 and
                        elements_list[i].children[0].type != "GroupControl"):
                     elements_list[i] = elements_list[i].children[0]
 
-                # Check element visibility
+                # 检查元素可见性
                 """
                 is_visible = self.is_element_visible(elements_list[i])
                 if not is_visible:
                     continue
                 """
 
-                # Build element info string
+                # 构建元素信息字符串
                 typestr = elements_list[i].type.replace('Control', '')
                 elements_list[i].index = self.g_index
                 
-                # Add status indicators
+                # 添加状态指示
                 status = ""
-                if typestr in ["CheckBox", "RadioButton"]:
-                    status = " (已选中)" if elements_list[i].item.GetToggleState() else " (未选中)"
-                elif typestr in ["Button", "MenuItem"] and not elements_list[i].item.IsEnabled:
+                if "RadioButton" in typestr:
+                    selectionItemPattern = elements_list[i].item.GetSelectionItemPattern()
+                    status = " (已选中)" if selectionItemPattern.IsSelected else " (未选中)"
+
+                elif "CheckBox" in typestr:
+                    togglePattern = elements_list[i].item.GetPattern(auto.PatternId.TogglePattern)
+                    if togglePattern:
+                        state = togglePattern.ToggleState
+                        if state == auto.ToggleState.On:
+                            status = " (已选中)"
+                        elif state == auto.ToggleState.Off:
+                            status = " (未选中)"
+
+                    
+                elif "MenuItem" in typestr and not elements_list[i].item.IsEnabled:
                     status = " (不可用)"
                 
                 line = f"{self.g_index} " + f"({typestr}) {elements_list[i].name}{status}\n"
@@ -181,7 +183,7 @@ class ScreenInfoCollector:
         return self.result
 
     def get_screen_info(self):
-        """Get information about all visible windows and their elements"""
+        """获取所有可见窗口及其元素的信息"""
         self.result = ""
         self.g_index = 0
         self.optable = []
@@ -190,7 +192,7 @@ class ScreenInfoCollector:
 
         while retry_count < max_retries:
             try:
-                windows = auto.WindowControl(searchDepth=1).GetParentControl().GetChildren()
+                windows = auto.WindowControl(searchDepth=1).GetParentControl().GetChildren() # type: ignore
                 for window in windows:
                     try:
                         window_title = window.Name
@@ -211,7 +213,7 @@ class ScreenInfoCollector:
                 return self.result
                 
             except Exception as e:
-                print(f"Error getting screen info: {str(e)}. Retrying in 2 seconds...")
+                print(f"获取屏幕信息时出错: {str(e)}。将在2秒后重试...")
                 retry_count += 1
         
         print(f"重试{max_retries}次后失败")
